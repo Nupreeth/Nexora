@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Assistant | Nexora{% endblock %}
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow">Assistant</p>
+    <h1>Grounded Resource Chat</h1>
+    <p>Ask free-form questions. Responses are limited to your uploaded reference library with citations.</p>
+</section>
+
+<section class="assistant-shell">
+    <section class="panel assistant-main">
+        <header class="assistant-head">
+            <div>
+                <h2>{{ active_session.title }}</h2>
+                <p class="subtle">{{ references_count }} reference document(s) available for retrieval</p>
+            </div>
+        </header>
+
+        <div class="assistant-thread" id="assistantThread">
+            {% if messages %}
+                {% for message in messages %}
+                    <article class="assistant-turn {{ 'assistant-response' if message.role == 'assistant' else 'assistant-prompt' }}">
+                        <div class="assistant-bubble">
+                            <span class="role-tag {{ 'assistant' if message.role == 'assistant' else '' }}">
+                                {{ "Nexora" if message.role == "assistant" else "You" }}
+                            </span>
+                            <p>{{ message.message_text }}</p>
+
+                            {% if message.role == "assistant" %}
+                                <div class="assistant-meta">
+                                    <span class="confidence-pill {% if message.confidence >= 0.75 %}high{% elif message.confidence >= 0.45 %}medium{% else %}low{% endif %}">
+                                        Confidence {{ "%.2f"|format(message.confidence) }}
+                                    </span>
+                                </div>
+
+                                <div class="citation-block">
+                                    <strong>Citations:</strong>
+                                    {% if message.citations %}
+                                        <span>{{ message.citations | join(", ") }}</span>
+                                    {% else %}
+                                        <span class="subtle">None</span>
+                                    {% endif %}
+                                </div>
+
+                                <details class="evidence-drawer">
+                                    <summary>Evidence snippets</summary>
+                                    {% if message.evidence %}
+                                        <ul class="evidence-list">
+                                            {% for item in message.evidence %}
+                                                <li>
+                                                    <strong>{{ item.citation }}</strong> <span class="mono">(score {{ item.score }})</span>
+                                                    <p>{{ item.snippet }}</p>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <p class="subtle">No supporting evidence found.</p>
+                                    {% endif %}
+                                </details>
+                            {% endif %}
+                        </div>
+                    </article>
+                {% endfor %}
+            {% else %}
+                <article class="assistant-empty">
+                    <p>No messages yet. Ask a question about your references.</p>
+                </article>
+            {% endif %}
+        </div>
+
+        <form method="post" action="{{ url_for('workflow.assistant_send_message', session_id=active_session.id) }}" class="assistant-composer">
+            <textarea name="prompt" rows="3" placeholder="Ask anything grounded in uploaded references..." required></textarea>
+            <button type="submit">Send</button>
+        </form>
+    </section>
+
+    <aside class="panel assistant-history">
+        <div class="assistant-history-head">
+            <h3>Chat History</h3>
+            <form method="post" action="{{ url_for('workflow.create_chat_session') }}">
+                <button type="submit">New Chat</button>
+            </form>
+        </div>
+
+        <div class="assistant-history-list">
+            {% for session in sessions %}
+                <a class="history-item {% if session.id == active_session.id %}active{% endif %}" href="{{ url_for('workflow.assistant', session_id=session.id) }}">
+                    <strong>{{ session.title }}</strong>
+                    <span class="subtle">{{ session.created_at.strftime("%Y-%m-%d %H:%M") }}</span>
+                </a>
+            {% endfor %}
+        </div>
+    </aside>
+</section>
+
+<script>
+(() => {
+    const thread = document.getElementById("assistantThread");
+    if (thread) {
+        thread.scrollTop = thread.scrollHeight;
+    }
+})();
+</script>
+{% endblock %}

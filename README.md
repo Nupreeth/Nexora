@@ -24,6 +24,7 @@ Core capabilities:
 - `"Not found in references."` fallback for unsupported questions
 - Reviewer edit workflow before export
 - Document export preserving original questionnaire order/structure
+- Grounded assistant chat (GPT-style) over uploaded references with persistent chat history
 
 ## 2. Industry & Fictional Company (Required Context)
 - Industry: B2B SaaS for supply chain and procurement operations
@@ -52,6 +53,7 @@ Files:
 2. Evidence snippets shown in review UI.
 3. Coverage summary (total, cited, not found).
 4. Version history through run tracking (`GenerationRun` entries).
+5. Persistent grounded chat sessions (`ChatSession` + `ChatMessage`).
 
 ## 4. System Architecture
 ```
@@ -63,7 +65,7 @@ app/
   models.py              # domain models
   routes/
     auth.py              # signup/login/logout
-    workflow.py          # dashboard, upload, generate, review, export
+    workflow.py          # dashboard, upload, generate, review, export, assistant chat
   services/
     parser_service.py    # file parsing for questionnaire + references
     retrieval_service.py # chunking, tf-idf retrieval, grounded answer creation

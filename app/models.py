@@ -17,6 +17,7 @@ class User(UserMixin, TimestampMixin, db.Model):
 
     questionnaires = db.relationship("Questionnaire", backref="owner", lazy=True)
     reference_documents = db.relationship("ReferenceDocument", backref="owner", lazy=True)
+    chat_sessions = db.relationship("ChatSession", backref="owner", lazy=True, cascade="all, delete-orphan")
 
 
 class Questionnaire(TimestampMixin, db.Model):
@@ -73,6 +74,39 @@ class Answer(db.Model):
     edited_by_user = db.Column(db.Boolean, nullable=False, default=False)
 
     question = db.relationship("Question")
+
+    @property
+    def citations(self):
+        return _decode_json_list(self.citations_json)
+
+    @property
+    def evidence(self):
+        data = _decode_json_list(self.evidence_json)
+        return [item for item in data if isinstance(item, dict)]
+
+    def set_citations(self, citations):
+        self.citations_json = json.dumps(citations)
+
+    def set_evidence(self, evidence):
+        self.evidence_json = json.dumps(evidence)
+
+
+class ChatSession(TimestampMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    title = db.Column(db.String(255), nullable=False, default="New chat")
+
+    messages = db.relationship("ChatMessage", backref="session", lazy=True, cascade="all, delete-orphan")
+
+
+class ChatMessage(TimestampMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.Integer, db.ForeignKey("chat_session.id"), nullable=False, index=True)
+    role = db.Column(db.String(16), nullable=False)
+    message_text = db.Column(db.Text, nullable=False)
+    citations_json = db.Column(db.Text, nullable=False, default="[]")
+    evidence_json = db.Column(db.Text, nullable=False, default="[]")
+    confidence = db.Column(db.Float, nullable=False, default=0.0)
 
     @property
     def citations(self):

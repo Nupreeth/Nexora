@@ -9,7 +9,15 @@ from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from ..extensions import db
-from ..models import Answer, GenerationRun, Question, Questionnaire, ReferenceDocument
+from ..models import (
+    Answer,
+    ChatMessage,
+    ChatSession,
+    GenerationRun,
+    Question,
+    Questionnaire,
+    ReferenceDocument,
+)
 from ..services.export_service import build_export_payload
 from ..services.parser_service import extract_reference_text, parse_questionnaire
 from ..services.retrieval_service import answer_question, build_retrieval_index, chunk_references
@@ -54,6 +62,101 @@ def dashboard():
         references=references,
         recent_runs=recent_runs,
     )
+
+
+@workflow_bp.route("/assistant", methods=["GET"])
+@login_required
+def assistant():
+    sessions = (
+        ChatSession.query.filter_by(user_id=current_user.id)
+        .order_by(ChatSession.created_at.desc())
+        .all()
+    )
+    if not sessions:
+        new_session = ChatSession(user_id=current_user.id, title="New chat")
+        db.session.add(new_session)
+        db.session.commit()
+        return redirect(url_for("workflow.assistant", session_id=new_session.id))
+
+    requested_session_id = request.args.get("session_id", type=int)
+    active_session = None
+    if requested_session_id is not None:
+        active_session = ChatSession.query.filter_by(
+            id=requested_session_id,
+            user_id=current_user.id,
+        ).first()
+    if active_session is None:
+        active_session = sessions[0]
+
+    messages = (
+        ChatMessage.query.filter_by(session_id=active_session.id)
+        .order_by(ChatMessage.created_at.asc())
+        .all()
+    )
+    references_count = ReferenceDocument.query.filter_by(user_id=current_user.id).count()
+
+    return render_template(
+        "workflow/assistant.html",
+        sessions=sessions,
+        active_session=active_session,
+        messages=messages,
+        references_count=references_count,
+    )
+
+
+@workflow_bp.route("/assistant/sessions", methods=["POST"])
+@login_required
+def create_chat_session():
+    session = ChatSession(user_id=current_user.id, title="New chat")
+    db.session.add(session)
+    db.session.commit()
+    return redirect(url_for("workflow.assistant", session_id=session.id))
+
+
+@workflow_bp.route("/assistant/sessions/<int:session_id>/messages", methods=["POST"])
+@login_required
+def assistant_send_message(session_id: int):
+    session = ChatSession.query.filter_by(id=session_id, user_id=current_user.id).first_or_404()
+    prompt = request.form.get("prompt", "").strip()
+    if not prompt:
+        flash("Please enter a message.", "error")
+        return redirect(url_for("workflow.assistant", session_id=session.id))
+
+    references = (
+        ReferenceDocument.query.filter_by(user_id=current_user.id)
+        .order_by(ReferenceDocument.created_at.asc())
+        .all()
+    )
+    if not references:
+        flash("Upload reference documents before using assistant chat.", "error")
+        return redirect(url_for("workflow.assistant", session_id=session.id))
+
+    user_message = ChatMessage(
+        session_id=session.id,
+        role="user",
+        message_text=prompt,
+        citations_json="[]",
+        evidence_json="[]",
+        confidence=1.0,
+    )
+    db.session.add(user_message)
+
+    result = _answer_from_references(prompt, references)
+    assistant_message = ChatMessage(
+        session_id=session.id,
+        role="assistant",
+        message_text=result["answer"],
+        citations_json=json.dumps(result["citations"]),
+        evidence_json=json.dumps(result["evidence"]),
+        confidence=result["confidence"],
+    )
+    db.session.add(assistant_message)
+
+    if session.title == "New chat":
+        session.title = _derive_chat_title(prompt)
+
+    db.session.commit()
+    return redirect(url_for("workflow.assistant", session_id=session.id))
 
 
 @workflow_bp.route("/references/upload", methods=["POST"])
@@ -417,3 +520,36 @@ def _run_generation(questionnaire: Questionnaire, references: list[ReferenceDocu
         )
 
     return run
+
+
+def _answer_from_references(prompt: str, references: list[ReferenceDocument]) -> dict:
+    chunks = chunk_references(
+        [{"id": ref.id, "name": ref.original_filename, "text": ref.text_content} for ref in references]
+    )
+    if not chunks:
+        return {
+            "answer": "Not found in references.",
+            "citations": [],
+            "evidence": [],
+            "confidence": 0.0,
+        }
+    try:
+        vectorizer, matrix = build_retrieval_index(chunks)
+    except ValueError:
+        return {
+            "answer": "Not found in references.",
+            "citations": [],
+            "evidence": [],
+            "confidence": 0.0,
+        }
+    return answer_question(prompt, chunks, vectorizer, matrix)
+
+
+def _derive_chat_title(prompt: str) -> str:
+    words = re.findall(r"[A-Za-z0-9]+", prompt)
+    if not words:
+        return "New chat"
+    candidate = " ".join(words[:7]).strip()
+    if len(candidate) > 50:
+        return f"{candidate[:47].rstrip()}..."
+    return candidate
