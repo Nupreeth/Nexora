@@ -58,14 +58,6 @@
                         <label>Citations (comma-separated)</label>
                         <input type="text" name="citations_{{ row.answer_id }}" value="{{ row.citations | join(', ') }}">
 
-                        {% if row.citations %}
-                            <div class="citation-row">
-                                {% for citation in row.citations %}
-                                    <span class="citation-chip">{{ citation }}</span>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-
                         <details class="evidence-drawer">
                             <summary>Evidence snippets</summary>
                             {% if row.evidence %}

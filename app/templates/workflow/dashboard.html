@@ -3,27 +3,70 @@
 {% block content %}
 <section class="page-head">
     <p class="eyebrow">Workspace</p>
-    <h1>Questionnaire Automation Control Center</h1>
-    <p>Upload structured questionnaires and approved references, then launch a generation run.</p>
+    <h1>Nexora Control Room</h1>
+    <p>Upload everything once, generate instantly, then review in the assistant workspace.</p>
+</section>
+
+<section class="panel smooth-run">
+    <div class="smooth-head">
+        <h2>Smooth Run</h2>
+        <span class="flow-pill">Upload -> Generate -> Review</span>
+    </div>
+    <p class="subtle">Fast path: upload questionnaire + references in one action and jump straight to review.</p>
+    <form method="post" action="{{ url_for('workflow.quick_generate') }}" enctype="multipart/form-data" class="smooth-form">
+        <div class="field-block">
+            <label>Questionnaire file</label>
+            <input type="file" name="questionnaire_file" required>
+            <p class="subtle">CSV, XLSX, PDF, TXT</p>
+        </div>
+        <div class="field-block">
+            <label>Reference docs (optional if library already exists)</label>
+            <input type="file" name="reference_files" multiple>
+            <p class="subtle">TXT, MD, PDF, DOCX, CSV, XLSX</p>
+        </div>
+        <label class="check-item">
+            <input type="checkbox" name="use_existing_refs" checked>
+            <span>Also include already uploaded reference library</span>
+        </label>
+        <button type="submit">Generate Answers Now</button>
+    </form>
 </section>
 
 <section class="grid-two">
     <article class="panel">
-        <h2>1) Upload Questionnaire</h2>
-        <p>Accepted formats: CSV, XLSX, PDF, TXT</p>
-        <form method="post" action="{{ url_for('workflow.upload_questionnaire') }}" enctype="multipart/form-data" class="form-stack">
-            <input type="file" name="questionnaire_file" required>
-            <button type="submit">Upload Questionnaire</button>
-        </form>
+        <h2>Library Uploads</h2>
+        <p class="subtle">Use these when you want to stage files before generating.</p>
+        <div class="stack-panels">
+            <form method="post" action="{{ url_for('workflow.upload_questionnaire') }}" enctype="multipart/form-data" class="form-stack muted-form">
+                <label>Upload questionnaire</label>
+                <input type="file" name="questionnaire_file" required>
+                <button type="submit">Upload Questionnaire</button>
+            </form>
+            <form method="post" action="{{ url_for('workflow.upload_references') }}" enctype="multipart/form-data" class="form-stack muted-form">
+                <label>Upload references</label>
+                <input type="file" name="reference_files" multiple required>
+                <button type="submit">Upload References</button>
+            </form>
+        </div>
     </article>
 
     <article class="panel">
-        <h2>2) Upload Reference Docs</h2>
-        <p>Accepted formats: TXT, MD, PDF, DOCX, CSV, XLSX</p>
-        <form method="post" action="{{ url_for('workflow.upload_references') }}" enctype="multipart/form-data" class="form-stack">
-            <input type="file" name="reference_files" multiple required>
-            <button type="submit">Upload References</button>
-        </form>
+        <h2>Recent Runs</h2>
+        {% if recent_runs %}
+            <ul class="item-list">
+                {% for run in recent_runs %}
+                    <li class="stacked">
+                        <div>
+                            <strong>{{ run.questionnaire.name }} | Run #{{ run.id }}</strong>
+                            <p class="subtle">{{ run.created_at.strftime("%Y-%m-%d %H:%M") }}</p>
+                        </div>
+                        <a class="inline-link" href="{{ url_for('workflow.review_run', questionnaire_id=run.questionnaire.id, run_id=run.id) }}">Open Review</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="subtle">No generation runs yet.</p>
+        {% endif %}
     </article>
 </section>
 

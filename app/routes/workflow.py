@@ -41,10 +41,18 @@ def dashboard():
         .order_by(ReferenceDocument.created_at.desc())
         .all()
     )
+    recent_runs = (
+        GenerationRun.query.join(Questionnaire, GenerationRun.questionnaire_id == Questionnaire.id)
+        .filter(Questionnaire.user_id == current_user.id)
+        .order_by(GenerationRun.created_at.desc())
+        .limit(8)
+        .all()
+    )
     return render_template(
         "workflow/dashboard.html",
         questionnaires=questionnaires,
         references=references,
+        recent_runs=recent_runs,
     )
 
 
@@ -56,48 +64,13 @@ def upload_references():
         flash("Please choose one or more reference files.", "error")
         return redirect(url_for("workflow.dashboard"))
 
-    added_count = 0
-    for uploaded in uploaded_files:
-        original_filename = secure_filename(uploaded.filename or "")
-        if not original_filename:
-            continue
-
-        ext = Path(original_filename).suffix.lower()
-        if ext not in ALLOWED_REFERENCE_EXTENSIONS:
-            flash(f"Skipped {original_filename}: unsupported file format.", "error")
-            continue
-
-        stored_name = f"{uuid4().hex}{ext}"
-        stored_path = current_app.config["REFERENCE_DIR"] / stored_name
-        uploaded.save(stored_path)
-
-        try:
-            text_content = extract_reference_text(stored_path, ext)
-        except Exception:
-            stored_path.unlink(missing_ok=True)
-            flash(f"Skipped {original_filename}: failed to parse.", "error")
-            continue
-
-        if not text_content.strip():
-            stored_path.unlink(missing_ok=True)
-            flash(f"Skipped {original_filename}: no readable content.", "error")
-            continue
-
-        doc = ReferenceDocument(
-            user_id=current_user.id,
-            original_filename=original_filename,
-            stored_path=str(stored_path),
-            file_ext=ext,
-            text_content=text_content,
-        )
-        db.session.add(doc)
-        added_count += 1
-
-    if added_count:
-        db.session.commit()
-        flash(f"Uploaded {added_count} reference document(s).", "success")
-    else:
+    created_docs = _store_reference_documents(uploaded_files, flash_errors=True)
+    if not created_docs:
         db.session.rollback()
+        return redirect(url_for("workflow.dashboard"))
+
+    db.session.commit()
+    flash(f"Uploaded {len(created_docs)} reference document(s).", "success")
     return redirect(url_for("workflow.dashboard"))
 
 
@@ -105,54 +78,60 @@ def upload_references():
 @login_required
 def upload_questionnaire():
     uploaded = request.files.get("questionnaire_file")
-    if not uploaded:
-        flash("Please choose a questionnaire file.", "error")
+    questionnaire, question_count = _store_questionnaire(uploaded)
+    if not questionnaire:
         return redirect(url_for("workflow.dashboard"))
-
-    original_filename = secure_filename(uploaded.filename or "")
-    if not original_filename:
-        flash("Invalid filename.", "error")
-        return redirect(url_for("workflow.dashboard"))
-
-    ext = Path(original_filename).suffix.lower()
-    if ext not in ALLOWED_QUESTIONNAIRE_EXTENSIONS:
-        flash("Unsupported questionnaire format.", "error")
-        return redirect(url_for("workflow.dashboard"))
-
-    stored_name = f"{uuid4().hex}{ext}"
-    stored_path = current_app.config["QUESTIONNAIRE_DIR"] / stored_name
-    uploaded.save(stored_path)
-
-    try:
-        question_texts, parse_meta = parse_questionnaire(stored_path, ext)
-    except Exception:
-        stored_path.unlink(missing_ok=True)
-        flash("Failed to parse questionnaire file.", "error")
-        return redirect(url_for("workflow.dashboard"))
-
-    question_texts = [text.strip() for text in question_texts if text and text.strip()]
-    if not question_texts:
-        stored_path.unlink(missing_ok=True)
-        flash("No questions were detected in this file.", "error")
-        return redirect(url_for("workflow.dashboard"))
-
-    questionnaire = Questionnaire(
-        user_id=current_user.id,
-        name=Path(original_filename).stem,
-        original_filename=original_filename,
-        stored_path=str(stored_path),
-        file_ext=ext,
-        parser_meta_json=json.dumps(parse_meta),
-    )
-    db.session.add(questionnaire)
-    db.session.flush()
-
-    for index, text in enumerate(question_texts, start=1):
-        db.session.add(Question(questionnaire_id=questionnaire.id, position=index, text=text))
 
     db.session.commit()
-    flash(f"Questionnaire uploaded with {len(question_texts)} question(s).", "success")
+    flash(f"Questionnaire uploaded with {question_count} question(s).", "success")
     return redirect(url_for("workflow.questionnaire_detail", questionnaire_id=questionnaire.id))
+
+
+@workflow_bp.route("/quick-generate", methods=["POST"])
+@login_required
+def quick_generate():
+    questionnaire_upload = request.files.get("questionnaire_file")
+    reference_uploads = request.files.getlist("reference_files")
+    use_existing_refs = request.form.get("use_existing_refs") == "on"
+
+    questionnaire, question_count = _store_questionnaire(questionnaire_upload)
+    if not questionnaire:
+        db.session.rollback()
+        return redirect(url_for("workflow.dashboard"))
+
+    new_docs = _store_reference_documents(reference_uploads, flash_errors=True)
+    selected_references = []
+
+    if use_existing_refs:
+        selected_references = (
+            ReferenceDocument.query.filter_by(user_id=current_user.id)
+            .order_by(ReferenceDocument.created_at.asc())
+            .all()
+        )
+    else:
+        selected_references = new_docs
+
+    if not selected_references:
+        db.session.commit()
+        flash("Questionnaire uploaded, but no usable references were selected.", "error")
+        return redirect(url_for("workflow.questionnaire_detail", questionnaire_id=questionnaire.id))
+
+    try:
+        run = _run_generation(questionnaire, selected_references)
+    except ValueError as exc:
+        db.session.rollback()
+        flash(str(exc), "error")
+        return redirect(url_for("workflow.questionnaire_detail", questionnaire_id=questionnaire.id))
+
+    db.session.commit()
+    if new_docs:
+        flash(
+            f"Smooth run complete: {question_count} questions parsed, {len(new_docs)} new references added.",
+            "success",
+        )
+    else:
+        flash(f"Smooth run complete: {question_count} questions parsed.", "success")
+    return redirect(url_for("workflow.review_run", questionnaire_id=questionnaire.id, run_id=run.id))
 
 
 @workflow_bp.route("/questionnaires/<int:questionnaire_id>")
@@ -211,40 +190,12 @@ def generate(questionnaire_id: int):
         flash("At least one reference document is required to generate answers.", "error")
         return redirect(url_for("workflow.questionnaire_detail", questionnaire_id=questionnaire.id))
 
-    chunks = chunk_references(
-        [{"id": ref.id, "name": ref.original_filename, "text": ref.text_content} for ref in references]
-    )
-    if not chunks:
-        flash("Reference documents do not contain enough text to generate answers.", "error")
-        return redirect(url_for("workflow.questionnaire_detail", questionnaire_id=questionnaire.id))
-
     try:
-        vectorizer, matrix = build_retrieval_index(chunks)
-    except ValueError:
-        flash("Could not build retrieval index from selected references.", "error")
+        run = _run_generation(questionnaire, references)
+    except ValueError as exc:
+        db.session.rollback()
+        flash(str(exc), "error")
         return redirect(url_for("workflow.questionnaire_detail", questionnaire_id=questionnaire.id))
-
-    run = GenerationRun(questionnaire_id=questionnaire.id)
-    db.session.add(run)
-    db.session.flush()
-
-    questions = (
-        Question.query.filter_by(questionnaire_id=questionnaire.id)
-        .order_by(Question.position.asc())
-        .all()
-    )
-
-    for question in questions:
-        result = answer_question(question.text, chunks, vectorizer, matrix)
-        answer = Answer(
-            run_id=run.id,
-            question_id=question.id,
-            answer_text=result["answer"],
-            citations_json=json.dumps(result["citations"]),
-            evidence_json=json.dumps(result["evidence"]),
-            confidence=result["confidence"],
-        )
-        db.session.add(answer)
 
     db.session.commit()
     flash("Answers generated. Please review and edit before exporting.", "success")
@@ -337,3 +288,132 @@ def export_run(questionnaire_id: int, run_id: int):
 
 def _owned_questionnaire_or_404(questionnaire_id: int) -> Questionnaire:
     return Questionnaire.query.filter_by(id=questionnaire_id, user_id=current_user.id).first_or_404()
+
+
+def _store_questionnaire(uploaded_file) -> tuple[Questionnaire | None, int]:
+    if not uploaded_file:
+        flash("Please choose a questionnaire file.", "error")
+        return None, 0
+
+    original_filename = secure_filename(uploaded_file.filename or "")
+    if not original_filename:
+        flash("Invalid questionnaire filename.", "error")
+        return None, 0
+
+    extension = Path(original_filename).suffix.lower()
+    if extension not in ALLOWED_QUESTIONNAIRE_EXTENSIONS:
+        flash("Unsupported questionnaire format.", "error")
+        return None, 0
+
+    stored_name = f"{uuid4().hex}{extension}"
+    stored_path = current_app.config["QUESTIONNAIRE_DIR"] / stored_name
+    uploaded_file.save(stored_path)
+
+    try:
+        question_texts, parse_meta = parse_questionnaire(stored_path, extension)
+    except Exception:
+        stored_path.unlink(missing_ok=True)
+        flash("Failed to parse questionnaire file.", "error")
+        return None, 0
+
+    question_texts = [text.strip() for text in question_texts if text and text.strip()]
+    if not question_texts:
+        stored_path.unlink(missing_ok=True)
+        flash("No questions were detected in this file.", "error")
+        return None, 0
+
+    questionnaire = Questionnaire(
+        user_id=current_user.id,
+        name=Path(original_filename).stem,
+        original_filename=original_filename,
+        stored_path=str(stored_path),
+        file_ext=extension,
+        parser_meta_json=json.dumps(parse_meta),
+    )
+    db.session.add(questionnaire)
+    db.session.flush()
+
+    for index, text in enumerate(question_texts, start=1):
+        db.session.add(Question(questionnaire_id=questionnaire.id, position=index, text=text))
+
+    return questionnaire, len(question_texts)
+
+
+def _store_reference_documents(uploaded_files, flash_errors: bool = True) -> list[ReferenceDocument]:
+    created_docs: list[ReferenceDocument] = []
+    for uploaded in uploaded_files:
+        original_filename = secure_filename(uploaded.filename or "")
+        if not original_filename:
+            continue
+
+        extension = Path(original_filename).suffix.lower()
+        if extension not in ALLOWED_REFERENCE_EXTENSIONS:
+            if flash_errors:
+                flash(f"Skipped {original_filename}: unsupported file format.", "error")
+            continue
+
+        stored_name = f"{uuid4().hex}{extension}"
+        stored_path = current_app.config["REFERENCE_DIR"] / stored_name
+        uploaded.save(stored_path)
+
+        try:
+            text_content = extract_reference_text(stored_path, extension)
+        except Exception:
+            stored_path.unlink(missing_ok=True)
+            if flash_errors:
+                flash(f"Skipped {original_filename}: failed to parse.", "error")
+            continue
+
+        if not text_content.strip():
+            stored_path.unlink(missing_ok=True)
+            if flash_errors:
+                flash(f"Skipped {original_filename}: no readable content.", "error")
+            continue
+
+        document = ReferenceDocument(
+            user_id=current_user.id,
+            original_filename=original_filename,
+            stored_path=str(stored_path),
+            file_ext=extension,
+            text_content=text_content,
+        )
+        db.session.add(document)
+        created_docs.append(document)
+    return created_docs
+
+
+def _run_generation(questionnaire: Questionnaire, references: list[ReferenceDocument]) -> GenerationRun:
+    chunks = chunk_references(
+        [{"id": ref.id, "name": ref.original_filename, "text": ref.text_content} for ref in references]
+    )
+    if not chunks:
+        raise ValueError("Reference documents do not contain enough text to generate answers.")
+
+    try:
+        vectorizer, matrix = build_retrieval_index(chunks)
+    except ValueError as exc:
+        raise ValueError("Could not build retrieval index from selected references.") from exc
+
+    run = GenerationRun(questionnaire_id=questionnaire.id)
+    db.session.add(run)
+    db.session.flush()
+
+    questions = (
+        Question.query.filter_by(questionnaire_id=questionnaire.id)
+        .order_by(Question.position.asc())
+        .all()
+    )
+    for question in questions:
+        result = answer_question(question.text, chunks, vectorizer, matrix)
+        db.session.add(
+            Answer(
+                run_id=run.id,
+                question_id=question.id,
+                answer_text=result["answer"],
+                citations_json=json.dumps(result["citations"]),
+                evidence_json=json.dumps(result["evidence"]),
+                confidence=result["confidence"],
+            )
+        )
+
+    return run

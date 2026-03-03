@@ -260,6 +260,65 @@ button:hover {
     line-height: 1.28;
 }
 
+.smooth-run {
+    margin-bottom: 16px;
+    border-color: #ced7ea;
+    background: linear-gradient(135deg, #ffffff 0%, #f6f9ff 62%, #f2f7f4 100%);
+}
+
+.smooth-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.smooth-head h2 {
+    margin: 0;
+}
+
+.flow-pill {
+    display: inline-flex;
+    border: 1px solid #cad7f8;
+    background: #edf2ff;
+    color: #264792;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 5px 10px;
+}
+
+.smooth-form {
+    margin-top: 10px;
+    display: grid;
+    gap: 12px;
+}
+
+.field-block {
+    border: 1px solid #d7deef;
+    border-radius: 12px;
+    padding: 12px;
+    background: #ffffff;
+}
+
+.field-block label {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.stack-panels {
+    display: grid;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.muted-form {
+    border: 1px solid #d8deec;
+    border-radius: 12px;
+    padding: 12px;
+    background: #f8faff;
+}
+
 .chat-shell {
     display: grid;
     grid-template-columns: 310px minmax(0, 1fr);
@@ -402,23 +461,6 @@ button:hover {
     color: #8a3333;
     background: #fdeceb;
     border-color: #ecb6b6;
-}
-
-.citation-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 8px;
-}
-
-.citation-chip {
-    display: inline-flex;
-    font-size: 0.78rem;
-    border: 1px solid #cfdaf3;
-    background: var(--primary-soft);
-    color: #24448a;
-    border-radius: 999px;
-    padding: 4px 9px;
 }
 
 .evidence-drawer {
