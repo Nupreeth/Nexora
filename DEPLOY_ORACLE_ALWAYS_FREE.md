@@ -1,4 +1,4 @@
-# Deploy RFPilot AI on Oracle Cloud Always Free (No Monthly Cost)
+# Deploy Nexora on Oracle Cloud Always Free (No Monthly Cost)
 
 As of **March 3, 2026**, this is the best no-monthly-cost path for keeping the app publicly available without free-tier sleep behavior common on PaaS free plans.
 
@@ -49,7 +49,7 @@ Create `/etc/systemd/system/rfpilot.service`:
 
 ```ini
 [Unit]
-Description=RFPilot AI Flask App
+Description=Nexora Flask App
 After=network.target
 
 [Service]

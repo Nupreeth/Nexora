@@ -7,12 +7,12 @@ app_port: 7860
 pinned: false
 ---
 
-# RFPilot AI
+# Nexora
 
 Production-style structured questionnaire answering platform for B2B SaaS security/compliance workflows.
 
 ## 1. What Was Built
-RFPilot AI is a full-stack web application that automates structured questionnaire completion using uploaded reference documents as the source of truth.
+Nexora is a full-stack web application that automates structured questionnaire completion using uploaded reference documents as the source of truth.
 
 Core capabilities:
 - User authentication (`Sign up`, `Login`, `Logout`)
