@@ -151,3 +151,7 @@ Suggested hosts:
 Set env vars in deployment:
 - `SECRET_KEY`
 - `DATABASE_URL` (or keep default SQLite for demo)
+
+## 13. Best No-Card Deployment
+If you need deployment without a credit card, use Hugging Face Spaces (Docker):
+- See: `DEPLOY_HF_SPACES.md`
