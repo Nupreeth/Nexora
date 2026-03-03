@@ -1,3 +1,13 @@
+---
+title: Nexora
+emoji: "N"
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # RFPilot AI
 
 Production-style structured questionnaire answering platform for B2B SaaS security/compliance workflows.
