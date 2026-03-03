@@ -7,3 +7,4 @@ instance/
 uploads/
 .env
 cloudflared*.log
+tmp_logs/
