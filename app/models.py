@@ -55,12 +55,21 @@ class ReferenceDocument(TimestampMixin, db.Model):
     file_ext = db.Column(db.String(16), nullable=False)
     text_content = db.Column(db.Text, nullable=False)
 
+    run_links = db.relationship("GenerationRunReference", backref="reference_document", lazy=True, cascade="all, delete-orphan")
+
 
 class GenerationRun(TimestampMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     questionnaire_id = db.Column(db.Integer, db.ForeignKey("questionnaire.id"), nullable=False, index=True)
 
     answers = db.relationship("Answer", backref="run", lazy=True, cascade="all, delete-orphan")
+    reference_links = db.relationship("GenerationRunReference", backref="run", lazy=True, cascade="all, delete-orphan")
+
+
+class GenerationRunReference(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.Integer, db.ForeignKey("generation_run.id"), nullable=False, index=True)
+    reference_document_id = db.Column(db.Integer, db.ForeignKey("reference_document.id"), nullable=False, index=True)
 
 
 class Answer(db.Model):

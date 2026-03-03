@@ -819,6 +819,20 @@ button:active,
     max-height: 160px;
 }
 
+.assistant-option {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+    color: var(--text-2);
+}
+
+.assistant-option input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+}
+
 .assistant-history {
     position: sticky;
     top: 92px;

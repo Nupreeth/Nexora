@@ -14,6 +14,7 @@ from ..models import (
     ChatMessage,
     ChatSession,
     GenerationRun,
+    GenerationRunReference,
     Question,
     Questionnaire,
     ReferenceDocument,
@@ -365,6 +366,7 @@ def review_run(questionnaire_id: int, run_id: int):
             .order_by(ChatMessage.created_at.asc())
             .all()
         )
+    run_references = _references_for_run(run, current_user.id)
 
     return render_template(
         "workflow/review.html",
@@ -373,6 +375,7 @@ def review_run(questionnaire_id: int, run_id: int):
         rows=rows,
         coverage=coverage,
         chat_messages=chat_messages,
+        run_references=run_references,
     )
 
 
@@ -408,11 +411,22 @@ def review_chat(questionnaire_id: int, run_id: int):
         flash("Please enter a follow-up question.", "error")
         return redirect(url_for("workflow.review_run", questionnaire_id=questionnaire.id, run_id=run.id))
 
-    references = (
-        ReferenceDocument.query.filter_by(user_id=current_user.id)
-        .order_by(ReferenceDocument.created_at.asc())
-        .all()
-    )
+    include_other_data = request.form.get("include_other_data") == "on"
+    if include_other_data:
+        references = (
+            ReferenceDocument.query.filter_by(user_id=current_user.id)
+            .order_by(ReferenceDocument.created_at.asc())
+            .all()
+        )
+    else:
+        references = _references_for_run(run, current_user.id)
+
+    if not references:
+        references = (
+            ReferenceDocument.query.filter_by(user_id=current_user.id)
+            .order_by(ReferenceDocument.created_at.asc())
+            .all()
+        )
     if not references:
         flash("Upload reference documents before using chat.", "error")
         return redirect(url_for("workflow.review_run", questionnaire_id=questionnaire.id, run_id=run.id))
@@ -554,6 +568,8 @@ def _run_generation(questionnaire: Questionnaire, references: list[ReferenceDocu
     run = GenerationRun(questionnaire_id=questionnaire.id)
     db.session.add(run)
     db.session.flush()
+    for reference in references:
+        db.session.add(GenerationRunReference(run_id=run.id, reference_document_id=reference.id))
 
     questions = (
         Question.query.filter_by(questionnaire_id=questionnaire.id)
@@ -623,3 +639,23 @@ def _get_or_create_run_chat_session(questionnaire: Questionnaire, run: Generatio
 def _find_run_chat_session(questionnaire: Questionnaire, run: GenerationRun) -> ChatSession | None:
     title = f"Run {run.id} | {questionnaire.name}"
     return ChatSession.query.filter_by(user_id=current_user.id, title=title).first()
+
+
+def _references_for_run(run: GenerationRun, user_id: int) -> list[ReferenceDocument]:
+    links = (
+        GenerationRunReference.query.filter_by(run_id=run.id)
+        .order_by(GenerationRunReference.id.asc())
+        .all()
+    )
+    if not links:
+        return []
+
+    reference_ids = [link.reference_document_id for link in links]
+    return (
+        ReferenceDocument.query.filter(
+            ReferenceDocument.user_id == user_id,
+            ReferenceDocument.id.in_(reference_ids),
+        )
+        .order_by(ReferenceDocument.created_at.asc())
+        .all()
+    )

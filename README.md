@@ -25,6 +25,7 @@ Core capabilities:
 - Reviewer edit workflow before export
 - Document export preserving original questionnaire order/structure
 - Grounded assistant chat (GPT-style) over uploaded references with persistent chat history
+- Run-scoped follow-up chat in review page (defaults to run references, optional checkbox to include full library)
 
 ## 2. Industry & Fictional Company (Required Context)
 - Industry: B2B SaaS for supply chain and procurement operations

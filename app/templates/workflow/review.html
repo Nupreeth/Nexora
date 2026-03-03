@@ -95,7 +95,10 @@
         <section class="embedded-assistant" id="run-chat">
             <header class="embedded-assistant-head">
                 <h3>Follow-up Chat (Grounded to References)</h3>
-                <p class="subtle">Ask free-form questions without leaving this run.</p>
+                <p class="subtle">
+                    Default scope: {{ run_references|length }} reference document(s) selected for this run.
+                    Check the option below to include your full library.
+                </p>
             </header>
             <div class="embedded-assistant-thread" id="runChatThread">
                 {% if chat_messages %}
@@ -132,6 +135,10 @@
             </div>
             <form method="post" action="{{ url_for('workflow.review_chat', questionnaire_id=questionnaire.id, run_id=run.id) }}" class="assistant-composer">
                 <textarea name="prompt" rows="3" placeholder="Ask a follow-up question about your references..." required></textarea>
+                <label class="assistant-option">
+                    <input type="checkbox" name="include_other_data">
+                    <span>Include other uploaded reference data (outside this run)</span>
+                </label>
                 <button type="submit">Send</button>
             </form>
         </section>
