@@ -357,6 +357,14 @@ def review_run(questionnaire_id: int, run_id: int):
         ),
         "not_found": sum(1 for row in rows if row["answer"] == "Not found in references."),
     }
+    chat_session = _find_run_chat_session(questionnaire, run)
+    chat_messages = []
+    if chat_session:
+        chat_messages = (
+            ChatMessage.query.filter_by(session_id=chat_session.id)
+            .order_by(ChatMessage.created_at.asc())
+            .all()
+        )
 
     return render_template(
         "workflow/review.html",
@@ -364,6 +372,7 @@ def review_run(questionnaire_id: int, run_id: int):
         run=run,
         rows=rows,
         coverage=coverage,
+        chat_messages=chat_messages,
     )
 
 
@@ -387,6 +396,51 @@ def export_run(questionnaire_id: int, run_id: int):
         download_name=filename,
         mimetype=mimetype,
     )
+
+
+@workflow_bp.route("/questionnaires/<int:questionnaire_id>/review/<int:run_id>/chat", methods=["POST"])
+@login_required
+def review_chat(questionnaire_id: int, run_id: int):
+    questionnaire = _owned_questionnaire_or_404(questionnaire_id)
+    run = GenerationRun.query.filter_by(id=run_id, questionnaire_id=questionnaire.id).first_or_404()
+    prompt = request.form.get("prompt", "").strip()
+    if not prompt:
+        flash("Please enter a follow-up question.", "error")
+        return redirect(url_for("workflow.review_run", questionnaire_id=questionnaire.id, run_id=run.id))
+
+    references = (
+        ReferenceDocument.query.filter_by(user_id=current_user.id)
+        .order_by(ReferenceDocument.created_at.asc())
+        .all()
+    )
+    if not references:
+        flash("Upload reference documents before using chat.", "error")
+        return redirect(url_for("workflow.review_run", questionnaire_id=questionnaire.id, run_id=run.id))
+
+    chat_session = _get_or_create_run_chat_session(questionnaire, run)
+    db.session.add(
+        ChatMessage(
+            session_id=chat_session.id,
+            role="user",
+            message_text=prompt,
+            citations_json="[]",
+            evidence_json="[]",
+            confidence=1.0,
+        )
+    )
+    result = _answer_from_references(prompt, references)
+    db.session.add(
+        ChatMessage(
+            session_id=chat_session.id,
+            role="assistant",
+            message_text=result["answer"],
+            citations_json=json.dumps(result["citations"]),
+            evidence_json=json.dumps(result["evidence"]),
+            confidence=result["confidence"],
+        )
+    )
+    db.session.commit()
+    return redirect(url_for("workflow.review_run", questionnaire_id=questionnaire.id, run_id=run.id))
 
 
 def _owned_questionnaire_or_404(questionnaire_id: int) -> Questionnaire:
@@ -553,3 +607,19 @@ def _derive_chat_title(prompt: str) -> str:
     if len(candidate) > 50:
         return f"{candidate[:47].rstrip()}..."
     return candidate
+
+
+def _get_or_create_run_chat_session(questionnaire: Questionnaire, run: GenerationRun) -> ChatSession:
+    title = f"Run {run.id} | {questionnaire.name}"
+    session = ChatSession.query.filter_by(user_id=current_user.id, title=title).first()
+    if session:
+        return session
+    session = ChatSession(user_id=current_user.id, title=title)
+    db.session.add(session)
+    db.session.flush()
+    return session
+
+
+def _find_run_chat_session(questionnaire: Questionnaire, run: GenerationRun) -> ChatSession | None:
+    title = f"Run {run.id} | {questionnaire.name}"
+    return ChatSession.query.filter_by(user_id=current_user.id, title=title).first()

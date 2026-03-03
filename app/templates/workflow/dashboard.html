@@ -4,9 +4,9 @@
 <section class="page-head">
     <p class="eyebrow">Workspace</p>
     <h1>Nexora Control Room</h1>
-    <p>Upload everything once, generate instantly, then review in the assistant workspace.</p>
+    <p>Upload once, generate instantly, then review and chat in the same run workspace.</p>
     <div>
-        <a class="primary-link" href="{{ url_for('workflow.assistant') }}">Open Grounded Assistant</a>
+        <a class="primary-link" href="{{ url_for('workflow.assistant') }}">Open Standalone Assistant</a>
     </div>
 </section>
 
@@ -35,42 +35,23 @@
     </form>
 </section>
 
-<section class="grid-two">
-    <article class="panel">
-        <h2>Library Uploads</h2>
-        <p class="subtle">Use these when you want to stage files before generating.</p>
-        <div class="stack-panels">
-            <form method="post" action="{{ url_for('workflow.upload_questionnaire') }}" enctype="multipart/form-data" class="form-stack muted-form">
-                <label>Upload questionnaire</label>
-                <input type="file" name="questionnaire_file" required>
-                <button type="submit">Upload Questionnaire</button>
-            </form>
-            <form method="post" action="{{ url_for('workflow.upload_references') }}" enctype="multipart/form-data" class="form-stack muted-form">
-                <label>Upload references</label>
-                <input type="file" name="reference_files" multiple required>
-                <button type="submit">Upload References</button>
-            </form>
-        </div>
-    </article>
-
-    <article class="panel">
-        <h2>Recent Runs</h2>
-        {% if recent_runs %}
-            <ul class="item-list">
-                {% for run in recent_runs %}
-                    <li class="stacked">
-                        <div>
-                            <strong>{{ run.questionnaire.name }} | Run #{{ run.id }}</strong>
-                            <p class="subtle">{{ run.created_at.strftime("%Y-%m-%d %H:%M") }}</p>
-                        </div>
-                        <a class="inline-link" href="{{ url_for('workflow.review_run', questionnaire_id=run.questionnaire.id, run_id=run.id) }}">Open Review</a>
-                    </li>
-                {% endfor %}
-            </ul>
-        {% else %}
-            <p class="subtle">No generation runs yet.</p>
-        {% endif %}
-    </article>
+<section class="panel">
+    <h2>Recent Runs</h2>
+    {% if recent_runs %}
+        <ul class="item-list">
+            {% for run in recent_runs %}
+                <li class="stacked">
+                    <div>
+                        <strong>{{ run.questionnaire.name }} | Run #{{ run.id }}</strong>
+                        <p class="subtle">{{ run.created_at.strftime("%Y-%m-%d %H:%M") }}</p>
+                    </div>
+                    <a class="inline-link" href="{{ url_for('workflow.review_run', questionnaire_id=run.questionnaire.id, run_id=run.id) }}">Open Review + Chat</a>
+                </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="subtle">No generation runs yet.</p>
+    {% endif %}
 </section>
 
 <section class="grid-two">

@@ -685,6 +685,35 @@ button:active,
     flex-wrap: wrap;
 }
 
+.embedded-assistant {
+    margin: 0.85rem 0.9rem 1rem;
+    border: 1px solid rgba(123, 168, 248, 0.22);
+    border-radius: 14px;
+    background: rgba(7, 9, 14, 0.92);
+    overflow: hidden;
+}
+
+.embedded-assistant-head {
+    padding: 0.8rem 0.9rem 0.5rem;
+    border-bottom: 1px solid rgba(127, 170, 247, 0.15);
+}
+
+.embedded-assistant-head h3 {
+    margin: 0 0 0.2rem;
+}
+
+.embedded-assistant-head p {
+    margin: 0;
+}
+
+.embedded-assistant-thread {
+    max-height: 310px;
+    overflow: auto;
+    padding: 0.75rem 0.8rem;
+    display: grid;
+    gap: 0.6rem;
+}
+
 .assistant-shell {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 310px;
@@ -894,6 +923,11 @@ button:active,
     .chat-form {
         padding-left: 0.75rem;
         padding-right: 0.75rem;
+    }
+
+    .embedded-assistant {
+        margin-left: 0.75rem;
+        margin-right: 0.75rem;
     }
 
     .assistant-thread {

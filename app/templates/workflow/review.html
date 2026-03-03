@@ -4,7 +4,7 @@
 <section class="page-head">
     <p class="eyebrow">Review & Export</p>
     <h1>{{ questionnaire.name }} | Run #{{ run.id }}</h1>
-    <p>Chat-style review workspace for grounded answers and citations.</p>
+    <p>Review generated answers, then ask follow-up questions in the same workspace.</p>
 </section>
 
 <section class="chat-shell">
@@ -91,6 +91,50 @@
                 <a class="inline-link" href="{{ url_for('workflow.export_run', questionnaire_id=questionnaire.id, run_id=run.id) }}">Export Current Run</a>
             </div>
         </form>
+
+        <section class="embedded-assistant" id="run-chat">
+            <header class="embedded-assistant-head">
+                <h3>Follow-up Chat (Grounded to References)</h3>
+                <p class="subtle">Ask free-form questions without leaving this run.</p>
+            </header>
+            <div class="embedded-assistant-thread" id="runChatThread">
+                {% if chat_messages %}
+                    {% for message in chat_messages %}
+                        <article class="assistant-turn {{ 'assistant-response' if message.role == 'assistant' else 'assistant-prompt' }}">
+                            <div class="assistant-bubble">
+                                <span class="role-tag {{ 'assistant' if message.role == 'assistant' else '' }}">
+                                    {{ "Nexora" if message.role == "assistant" else "You" }}
+                                </span>
+                                <p>{{ message.message_text }}</p>
+                                {% if message.role == "assistant" %}
+                                    <div class="assistant-meta">
+                                        <span class="confidence-pill {% if message.confidence >= 0.75 %}high{% elif message.confidence >= 0.45 %}medium{% else %}low{% endif %}">
+                                            Confidence {{ "%.2f"|format(message.confidence) }}
+                                        </span>
+                                    </div>
+                                    <div class="citation-block">
+                                        <strong>Citations:</strong>
+                                        {% if message.citations %}
+                                            <span>{{ message.citations | join(", ") }}</span>
+                                        {% else %}
+                                            <span class="subtle">None</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </article>
+                    {% endfor %}
+                {% else %}
+                    <article class="assistant-empty">
+                        <p>No follow-up chat yet. Ask a question below.</p>
+                    </article>
+                {% endif %}
+            </div>
+            <form method="post" action="{{ url_for('workflow.review_chat', questionnaire_id=questionnaire.id, run_id=run.id) }}" class="assistant-composer">
+                <textarea name="prompt" rows="3" placeholder="Ask a follow-up question about your references..." required></textarea>
+                <button type="submit">Send</button>
+            </form>
+        </section>
     </section>
 </section>
 <script>
@@ -106,6 +150,11 @@
             link.style.display = qText.includes(query) ? "inline-flex" : "none";
         });
     });
+
+    const runChatThread = document.getElementById("runChatThread");
+    if (runChatThread) {
+        runChatThread.scrollTop = runChatThread.scrollHeight;
+    }
 })();
 </script>
 {% endblock %}
