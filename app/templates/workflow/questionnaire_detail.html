@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}{{ questionnaire.name }} | RFPilot AI{% endblock %}
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow">Questionnaire</p>
+    <h1>{{ questionnaire.name }}</h1>
+    <p>{{ questionnaire.original_filename }} | {{ questions|length }} parsed questions</p>
+</section>
+
+<section class="panel">
+    <h2>3) Generate Answers</h2>
+    <p>Select references for this run, then generate AI answers with citations.</p>
+    <form method="post" action="{{ url_for('workflow.generate', questionnaire_id=questionnaire.id) }}" class="form-stack">
+        {% if references %}
+            <div class="checkbox-grid">
+                {% for ref in references %}
+                    <label class="check-item">
+                        <input type="checkbox" name="reference_ids" value="{{ ref.id }}" checked>
+                        <span>{{ ref.original_filename }}</span>
+                    </label>
+                {% endfor %}
+            </div>
+            <button type="submit">Generate Answers</button>
+        {% else %}
+            <p class="subtle">Upload reference docs from dashboard before generating.</p>
+        {% endif %}
+    </form>
+</section>
+
+<section class="grid-two">
+    <article class="panel">
+        <h2>Parsed Questions</h2>
+        <ol class="question-list">
+            {% for question in questions %}
+                <li>{{ question.text }}</li>
+            {% endfor %}
+        </ol>
+    </article>
+
+    <article class="panel">
+        <h2>Run History</h2>
+        {% if run_summaries %}
+            <ul class="item-list">
+                {% for item in run_summaries %}
+                    <li class="stacked">
+                        <div>
+                            <strong>Run #{{ item.run.id }}</strong>
+                            <p class="subtle">{{ item.run.created_at.strftime("%Y-%m-%d %H:%M") }}</p>
+                            <p class="subtle">Total: {{ item.total }} | Cited: {{ item.cited }} | Not found: {{ item.not_found }}</p>
+                        </div>
+                        <div class="inline-actions">
+                            <a class="inline-link" href="{{ url_for('workflow.review_run', questionnaire_id=questionnaire.id, run_id=item.run.id) }}">Review</a>
+                            <a class="inline-link" href="{{ url_for('workflow.export_run', questionnaire_id=questionnaire.id, run_id=item.run.id) }}">Export</a>
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="subtle">No runs yet.</p>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

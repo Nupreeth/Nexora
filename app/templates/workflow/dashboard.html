@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Dashboard | RFPilot AI{% endblock %}
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow">Workspace</p>
+    <h1>Questionnaire Automation Control Center</h1>
+    <p>Upload structured questionnaires and approved references, then launch a generation run.</p>
+</section>
+
+<section class="grid-two">
+    <article class="panel">
+        <h2>1) Upload Questionnaire</h2>
+        <p>Accepted formats: CSV, XLSX, PDF, TXT</p>
+        <form method="post" action="{{ url_for('workflow.upload_questionnaire') }}" enctype="multipart/form-data" class="form-stack">
+            <input type="file" name="questionnaire_file" required>
+            <button type="submit">Upload Questionnaire</button>
+        </form>
+    </article>
+
+    <article class="panel">
+        <h2>2) Upload Reference Docs</h2>
+        <p>Accepted formats: TXT, MD, PDF, DOCX, CSV, XLSX</p>
+        <form method="post" action="{{ url_for('workflow.upload_references') }}" enctype="multipart/form-data" class="form-stack">
+            <input type="file" name="reference_files" multiple required>
+            <button type="submit">Upload References</button>
+        </form>
+    </article>
+</section>
+
+<section class="grid-two">
+    <article class="panel">
+        <h2>Questionnaires</h2>
+        {% if questionnaires %}
+            <ul class="item-list">
+                {% for questionnaire in questionnaires %}
+                    <li>
+                        <div>
+                            <strong>{{ questionnaire.name }}</strong>
+                            <p class="subtle">{{ questionnaire.original_filename }} | {{ questionnaire.created_at.strftime("%Y-%m-%d %H:%M") }}</p>
+                        </div>
+                        <a class="inline-link" href="{{ url_for('workflow.questionnaire_detail', questionnaire_id=questionnaire.id) }}">Open</a>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="subtle">No questionnaires uploaded yet.</p>
+        {% endif %}
+    </article>
+
+    <article class="panel">
+        <h2>Reference Library</h2>
+        {% if references %}
+            <ul class="item-list compact">
+                {% for ref in references %}
+                    <li>
+                        <strong>{{ ref.original_filename }}</strong>
+                        <span class="mono">{{ ref.file_ext }}</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="subtle">No references uploaded yet.</p>
+        {% endif %}
+    </article>
+</section>
+{% endblock %}

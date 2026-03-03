@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Sign Up | RFPilot AI{% endblock %}
+{% block content %}
+<section class="auth-grid">
+    <article class="panel hero-panel">
+        <p class="eyebrow">Analyst Workflow</p>
+        <h1>Build a reliable answer pack from your internal source-of-truth documents.</h1>
+        <p>
+            Every generated response is tied to evidence snippets and citations so reviewers can trust outputs.
+        </p>
+    </article>
+
+    <article class="panel auth-panel">
+        <h2>Create Account</h2>
+        <form method="post" class="form-stack">
+            <label>Email</label>
+            <input type="email" name="email" required placeholder="you@company.com">
+
+            <label>Password</label>
+            <input type="password" name="password" required placeholder="Minimum 8 characters">
+
+            <button type="submit">Create Account</button>
+        </form>
+        <p class="subtle">Already registered? <a href="{{ url_for('auth.login') }}">Login</a>.</p>
+    </article>
+</section>
+{% endblock %}

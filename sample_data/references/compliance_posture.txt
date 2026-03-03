@@ -1,0 +1,7 @@
+Compliance Posture Statement
+
+- CrestPilot has completed a SOC 2 Type II audit covering Security, Availability, and Confidentiality trust criteria.
+- The current SOC 2 Type II report period is January 1, 2025 to December 31, 2025.
+- CrestPilot is currently preparing for ISO 27001 certification assessment and has not yet received certification.
+
+Compliance artifacts are available under NDA through the security review portal.

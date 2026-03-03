@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}500 | RFPilot AI{% endblock %}
+{% block content %}
+<section class="panel narrow">
+    <h1>500</h1>
+    <p>Unexpected server error. Please retry the operation.</p>
+    <a class="inline-link" href="{{ url_for('workflow.dashboard') }}">Go to dashboard</a>
+</section>
+{% endblock %}

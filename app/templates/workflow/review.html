@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Review Run #{{ run.id }} | RFPilot AI{% endblock %}
+{% block content %}
+<section class="page-head">
+    <p class="eyebrow">Review & Export</p>
+    <h1>{{ questionnaire.name }} | Run #{{ run.id }}</h1>
+    <p>Review answers, edit content, confirm citations, then export.</p>
+</section>
+
+<section class="summary-grid">
+    <article class="metric-card">
+        <h3>Total Questions</h3>
+        <p>{{ coverage.total_questions }}</p>
+    </article>
+    <article class="metric-card">
+        <h3>Answered with Citations</h3>
+        <p>{{ coverage.answered_with_citations }}</p>
+    </article>
+    <article class="metric-card">
+        <h3>Not Found</h3>
+        <p>{{ coverage.not_found }}</p>
+    </article>
+</section>
+
+<section class="panel">
+    <div class="action-row">
+        <h2>4) Reviewer Edits</h2>
+        <a class="inline-link" href="{{ url_for('workflow.export_run', questionnaire_id=questionnaire.id, run_id=run.id) }}">Export Document</a>
+    </div>
+
+    <form method="post" class="review-form">
+        {% for row in rows %}
+            <article class="review-item">
+                <header>
+                    <h3>Q{{ loop.index }}. {{ row.question }}</h3>
+                    <span class="confidence">Confidence: {{ "%.2f"|format(row.confidence) }}</span>
+                </header>
+
+                <label>Answer</label>
+                <textarea name="answer_{{ row.answer_id }}" rows="4">{{ row.answer }}</textarea>
+
+                <label>Citations (comma-separated)</label>
+                <input type="text" name="citations_{{ row.answer_id }}" value="{{ row.citations | join(', ') }}">
+
+                <div class="evidence-block">
+                    <h4>Evidence Snippets</h4>
+                    {% if row.evidence %}
+                        <ul>
+                            {% for item in row.evidence %}
+                                <li>
+                                    <strong>{{ item.citation }}</strong> (score: {{ item.score }})<br>
+                                    <span>{{ item.snippet }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="subtle">No supporting evidence found.</p>
+                    {% endif %}
+                </div>
+            </article>
+        {% endfor %}
+
+        <button type="submit">Save Review Edits</button>
+    </form>
+</section>
+{% endblock %}

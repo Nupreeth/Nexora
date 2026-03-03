@@ -1,0 +1,15 @@
+Incident Response Program Summary
+
+CrestPilot maintains a 24x7 on-call incident response rotation for production services.
+
+Severity Model
+- SEV-1: Material customer impact or confirmed unauthorized access.
+- SEV-2: Service degradation with no evidence of unauthorized access.
+
+Customer Notification Commitments
+- For confirmed security incidents affecting customer data, CrestPilot notifies impacted customers without undue delay and within 24 hours of confirmation.
+- Follow-up updates are sent at least every 24 hours until containment is completed.
+
+Post-Incident Actions
+- Root cause analysis is completed within 10 business days for SEV-1 incidents.
+- Corrective actions are tracked to closure by Security and Engineering leadership.
