@@ -1,6 +1,5 @@
 ---
 title: Nexora
-emoji: "N"
 colorFrom: blue
 colorTo: green
 sdk: docker
