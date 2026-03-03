@@ -9,7 +9,7 @@ pinned: false
 
 # Nexora
 
-Production-style structured questionnaire answering platform for B2B SaaS security/compliance workflows.
+Nexora is a Flask app I built to automate security/compliance questionnaire responses using uploaded internal references.
 
 ## Quick Links
 - Live App: https://nupreeth-nexora.hf.space
@@ -32,6 +32,11 @@ Core capabilities:
 - Same-format export support for CSV/XLSX/PDF questionnaire inputs
 - Grounded assistant chat (GPT-style) over uploaded references with persistent chat history
 - Run-scoped follow-up chat in review page (defaults to run references, optional checkbox to include full library)
+
+## Why I Built It This Way
+- I intentionally used TF-IDF retrieval + extractive answering instead of calling an external LLM for every request.
+- Reason: this keeps output deterministic, cheap to run, and easier to audit during review.
+- I kept the architecture simple (Flask + SQLAlchemy + service modules) so the core upload -> generate -> review -> export flow stays reliable.
 
 ## 2. Industry & Fictional Company (Required Context)
 - Industry: B2B SaaS for supply chain and procurement operations
@@ -148,13 +153,11 @@ Current test scope:
 - DB schema is created with `db.create_all()` for simplicity; production should use migrations.
 - Authentication is session-based with local user store; enterprise SSO is not included.
 
-## 11. Improvements With More Time
-1. LLM augmentation (optional) with citation-grounded generation guardrails.
-2. Pixel-perfect PDF layout parity with original questionnaire templates.
-3. Role-based access control and organization-level workspaces.
-4. Background job queue for large document processing.
-5. Audit trail with per-field edit history.
-6. Vector database backend for scale.
+## 11. If I Had Two More Days
+1. Add stronger answer quality controls: question-type prompts + stricter citation checks before returning an answer.
+2. Improve PDF export fidelity to better mirror original questionnaire layout.
+3. Add per-field edit history so reviewer changes are fully auditable.
+4. Add async/background processing for larger uploads to keep UI responsive.
 
 ## 12. Deployment Notes
 Included:
