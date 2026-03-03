@@ -10,6 +10,7 @@ This is the best practical option for your assignment when you only have RuPay a
 ## Important caveat
 - Free Spaces can sleep/restart when inactive or under resource pressure.
 - So this is good for assignment submission, but not strict 24x7 production SLA.
+- Container-local SQLite/files can reset after restarts. Use external Postgres for durable DB persistence.
 
 ## 1) Create Space
 1. Login to Hugging Face.
@@ -22,6 +23,12 @@ This is the best practical option for your assignment when you only have RuPay a
 Set these in `Settings -> Variables and secrets`:
 - `SECRET_KEY` = any long random string
 - `MAX_UPLOAD_SIZE_MB` = `20`
+- `DATABASE_URL` = external Postgres connection string
+
+Examples accepted by the app:
+- `postgresql+psycopg://user:password@host:5432/dbname`
+- `postgresql://user:password@host:5432/dbname`
+- `postgres://user:password@host:5432/dbname`
 
 ## 3) Push this repo to your Space
 ```bash
@@ -38,3 +45,9 @@ After build finishes, open:
 ## 5) Submission links
 - Live app link: your HF Space URL
 - Code link: GitHub repository URL
+
+## Optional: Free external DB providers
+- Neon (free tier)
+- Supabase (free tier)
+
+Use whichever is easiest for your account setup and paste the connection string into `DATABASE_URL`.

@@ -16,7 +16,7 @@ Nexora is a full-stack web application that automates structured questionnaire c
 
 Core capabilities:
 - User authentication (`Sign up`, `Login`, `Logout`)
-- Persistent data storage with SQLite and SQLAlchemy models
+- Persistent data storage with SQLAlchemy (`SQLite` local, `PostgreSQL` compatible via `DATABASE_URL`)
 - Questionnaire upload and parsing (CSV, XLSX, PDF, TXT)
 - Reference document upload and ingestion (TXT, MD, PDF, DOCX, CSV, XLSX)
 - AI-assisted answer generation using retrieval over reference chunks
@@ -42,7 +42,7 @@ Files:
 ## 3. Assignment Requirement Mapping
 ### Must-have requirements
 1. User authentication: implemented via `Flask-Login` and hashed passwords.
-2. Persistent DB: implemented via SQLite + SQLAlchemy models.
+2. Persistent DB: implemented via SQLAlchemy models with local SQLite and production-ready external PostgreSQL support.
 3. Upload -> generate -> review -> export flow: fully implemented.
 4. AI meaningful work: retrieval + extractive answer composition over chunked reference corpus.
 5. Grounded outputs with citations: each supported answer includes citations + evidence snippets.
@@ -162,8 +162,29 @@ Suggested hosts:
 
 Set env vars in deployment:
 - `SECRET_KEY`
-- `DATABASE_URL` (or keep default SQLite for demo)
+- `DATABASE_URL`
+
+Recommended for durable persistence:
+- Use managed Postgres (Neon/Supabase/Render Postgres) and set `DATABASE_URL` to that value.
+- App accepts `postgres://...` and `postgresql://...` URLs and normalizes them automatically.
+- Avoid relying on container-local SQLite in free serverless/container environments for long-term persistence.
 
 ## 13. Best No-Card Deployment
 If you need deployment without a credit card, use Hugging Face Spaces (Docker):
 - See: `DEPLOY_HF_SPACES.md`
+
+## 14. Final Submission Checklist
+- [x] User authentication
+- [x] Persistent database-backed models
+- [x] Upload questionnaire + references
+- [x] Parse questions from uploaded file
+- [x] Retrieve evidence from references
+- [x] Generate grounded answers with citations
+- [x] Return `"Not found in references."` when unsupported
+- [x] Structured review UI with question/answer/citations
+- [x] Reviewer edits before export
+- [x] Export preserves question order and adds answers/citations
+- [x] Nice-to-have: confidence score
+- [x] Nice-to-have: evidence snippets
+- [x] Nice-to-have: coverage summary
+- [x] Nice-to-have: run history
