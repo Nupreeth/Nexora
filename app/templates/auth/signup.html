@@ -19,6 +19,9 @@
             <label>Password</label>
             <input type="password" name="password" required placeholder="Minimum 8 characters">
 
+            <label>Confirm Password</label>
+            <input type="password" name="confirm_password" required placeholder="Re-enter password">
+
             <button type="submit">Create Account</button>
         </form>
         <p class="subtle">Already registered? <a href="{{ url_for('auth.login') }}">Login</a>.</p>

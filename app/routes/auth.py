@@ -17,9 +17,13 @@ def signup():
     if request.method == "POST":
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
+        confirm_password = request.form.get("confirm_password", "")
 
         if not email or not password:
             flash("Email and password are required.", "error")
+            return render_template("auth/signup.html")
+        if password != confirm_password:
+            flash("Password and confirm password do not match.", "error")
             return render_template("auth/signup.html")
         if len(password) < 8:
             flash("Password must be at least 8 characters.", "error")
