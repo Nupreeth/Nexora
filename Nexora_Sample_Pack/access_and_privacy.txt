@@ -1,0 +1,10 @@
+Access Control and Data Governance
+
+- Role-based access control is implemented in the application for customer tenant administrators and operators.
+- Internal production access uses least-privilege role grants and requires managerial approval.
+- Access recertification is completed quarterly.
+
+Data Residency and Subprocessors
+- Customer data is primarily hosted in the United States.
+- Enterprise customers can request dedicated regional deployment options subject to contract scope.
+- CrestPilot maintains a subprocessor register and provides change notifications 30 days before onboarding a new subprocessor.

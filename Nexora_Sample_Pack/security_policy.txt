@@ -1,0 +1,20 @@
+CrestPilot Logistics Cloud Security Baseline v4.2
+
+Identity and Authentication
+- Multi-factor authentication is mandatory for all engineering, platform, and support admin accounts in production.
+- SSO is enforced through Okta for all internal users.
+- Privileged sessions are logged and reviewed monthly.
+
+Cryptography
+- Customer data is encrypted at rest with AES-256 in managed database and object storage services.
+- All external and service-to-service traffic uses TLS 1.2+.
+- Deprecated ciphers and weak protocols are disabled by policy.
+
+Application Logging
+- Application and infrastructure logs are centralized in the security data lake.
+- Standard log retention is 365 days online and 90 additional days in cold archive.
+- Audit logs for admin actions are retained for 15 months.
+
+Security Training
+- Mandatory security awareness training is completed during onboarding.
+- All employees complete annual refresher training and quarterly phishing simulations.

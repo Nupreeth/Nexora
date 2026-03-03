@@ -1,0 +1,18 @@
+Infrastructure Resilience and Disaster Recovery
+
+Hosting
+- Production workloads are hosted on Amazon Web Services in the us-east-1 and us-west-2 regions.
+- Core services are deployed across multiple availability zones.
+
+Backups
+- Primary PostgreSQL backups run every 6 hours with point-in-time recovery enabled.
+- Object storage replication is configured with cross-region copies every 12 hours.
+- Backup retention is 35 days.
+
+Recovery Objectives
+- Target Recovery Time Objective (RTO) for critical customer-facing systems is 4 hours.
+- Target Recovery Point Objective (RPO) is 30 minutes.
+
+Disaster Recovery Testing
+- Tabletop disaster recovery exercises occur twice per year.
+- Full restoration tests are conducted at least once per year.
