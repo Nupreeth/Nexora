@@ -156,6 +156,12 @@ nav a:hover {
     color: #fff3cd;
 }
 
+.flash.info {
+    border-color: rgba(124, 191, 255, 0.45);
+    color: #dff1ff;
+    background: rgba(10, 24, 44, 0.9);
+}
+
 .page-head {
     display: grid;
     gap: 0.5rem;
