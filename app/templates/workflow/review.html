@@ -4,63 +4,92 @@
 <section class="page-head">
     <p class="eyebrow">Review & Export</p>
     <h1>{{ questionnaire.name }} | Run #{{ run.id }}</h1>
-    <p>Review answers, edit content, confirm citations, then export.</p>
+    <p>Chat-style review workspace for grounded answers and citations.</p>
 </section>
 
-<section class="summary-grid">
-    <article class="metric-card">
-        <h3>Total Questions</h3>
-        <p>{{ coverage.total_questions }}</p>
-    </article>
-    <article class="metric-card">
-        <h3>Answered with Citations</h3>
-        <p>{{ coverage.answered_with_citations }}</p>
-    </article>
-    <article class="metric-card">
-        <h3>Not Found</h3>
-        <p>{{ coverage.not_found }}</p>
-    </article>
-</section>
-
-<section class="panel">
-    <div class="action-row">
-        <h2>4) Reviewer Edits</h2>
-        <a class="inline-link" href="{{ url_for('workflow.export_run', questionnaire_id=questionnaire.id, run_id=run.id) }}">Export Document</a>
-    </div>
-
-    <form method="post" class="review-form">
-        {% for row in rows %}
-            <article class="review-item">
-                <header>
-                    <h3>Q{{ loop.index }}. {{ row.question }}</h3>
-                    <span class="confidence">Confidence: {{ "%.2f"|format(row.confidence) }}</span>
-                </header>
-
-                <label>Answer</label>
-                <textarea name="answer_{{ row.answer_id }}" rows="4">{{ row.answer }}</textarea>
-
-                <label>Citations (comma-separated)</label>
-                <input type="text" name="citations_{{ row.answer_id }}" value="{{ row.citations | join(', ') }}">
-
-                <div class="evidence-block">
-                    <h4>Evidence Snippets</h4>
-                    {% if row.evidence %}
-                        <ul>
-                            {% for item in row.evidence %}
-                                <li>
-                                    <strong>{{ item.citation }}</strong> (score: {{ item.score }})<br>
-                                    <span>{{ item.snippet }}</span>
-                                </li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <p class="subtle">No supporting evidence found.</p>
-                    {% endif %}
-                </div>
+<section class="chat-shell">
+    <aside class="panel chat-sidebar">
+        <h2>Run Summary</h2>
+        <div class="sidebar-metrics">
+            <article>
+                <span>Total Questions</span>
+                <strong>{{ coverage.total_questions }}</strong>
             </article>
-        {% endfor %}
+            <article>
+                <span>Answered with Citations</span>
+                <strong>{{ coverage.answered_with_citations }}</strong>
+            </article>
+            <article>
+                <span>Not Found</span>
+                <strong>{{ coverage.not_found }}</strong>
+            </article>
+        </div>
+        <div class="sidebar-actions">
+            <a class="primary-link" href="{{ url_for('workflow.export_run', questionnaire_id=questionnaire.id, run_id=run.id) }}">Export Document</a>
+            <p class="subtle">Save edits before exporting if you changed any answers.</p>
+        </div>
+    </aside>
 
-        <button type="submit">Save Review Edits</button>
-    </form>
+    <section class="panel chat-thread">
+        <header class="thread-head">
+            <h2>Nexora Assistant</h2>
+            <p>{{ rows|length }} generated responses ready for reviewer edits.</p>
+        </header>
+
+        <form method="post" class="chat-form">
+            {% for row in rows %}
+                <article class="chat-turn">
+                    <div class="bubble bubble-user">
+                        <span class="role-tag">Question</span>
+                        <p>{{ row.question }}</p>
+                    </div>
+
+                    <div class="bubble bubble-assistant">
+                        <div class="bubble-meta">
+                            <span class="role-tag assistant">Nexora</span>
+                            <span class="confidence-pill {% if row.confidence >= 0.75 %}high{% elif row.confidence >= 0.45 %}medium{% else %}low{% endif %}">
+                                Confidence {{ "%.2f"|format(row.confidence) }}
+                            </span>
+                        </div>
+
+                        <label>Answer</label>
+                        <textarea name="answer_{{ row.answer_id }}" rows="4">{{ row.answer }}</textarea>
+
+                        <label>Citations (comma-separated)</label>
+                        <input type="text" name="citations_{{ row.answer_id }}" value="{{ row.citations | join(', ') }}">
+
+                        {% if row.citations %}
+                            <div class="citation-row">
+                                {% for citation in row.citations %}
+                                    <span class="citation-chip">{{ citation }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <details class="evidence-drawer">
+                            <summary>Evidence snippets</summary>
+                            {% if row.evidence %}
+                                <ul class="evidence-list">
+                                    {% for item in row.evidence %}
+                                        <li>
+                                            <strong>{{ item.citation }}</strong> <span class="mono">(score {{ item.score }})</span>
+                                            <p>{{ item.snippet }}</p>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="subtle">No supporting evidence found.</p>
+                            {% endif %}
+                        </details>
+                    </div>
+                </article>
+            {% endfor %}
+
+            <div class="composer-actions">
+                <button type="submit">Save Review Edits</button>
+                <a class="inline-link" href="{{ url_for('workflow.export_run', questionnaire_id=questionnaire.id, run_id=run.id) }}">Export Current Run</a>
+            </div>
+        </form>
+    </section>
 </section>
 {% endblock %}
