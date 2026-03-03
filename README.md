@@ -9,193 +9,166 @@ pinned: false
 
 # Nexora
 
-Nexora is a Flask app I built to automate security/compliance questionnaire responses using uploaded internal references.
+Nexora is a web app for teams that answer security/compliance questionnaires using internal source-of-truth documents.
+It takes a questionnaire file, grounds each answer in uploaded references, and gives reviewers an edit + export workflow.
 
 ## Quick Links
 - Live App: https://nupreeth-nexora.hf.space
-- GitHub Repository: https://github.com/Nupreeth/Nexora
+- Space: https://huggingface.co/spaces/Nupreeth/Nexora
+- GitHub: https://github.com/Nupreeth/Nexora
 
-## 1. What Was Built
-Nexora is a full-stack web application that automates structured questionnaire completion using uploaded reference documents as the source of truth.
+## Product Flow
+```mermaid
+flowchart LR
+    A[Sign up / Login] --> B[Upload questionnaire]
+    B --> C[Upload or reuse reference docs]
+    C --> D[Parse questionnaire into questions]
+    D --> E[Chunk and index references]
+    E --> F[Generate answer per question]
+    F --> G{Evidence support found?}
+    G -- Yes --> H[Answer + citations + confidence]
+    G -- No --> I["Not found in references."]
+    H --> J[Review and edit answers]
+    I --> J
+    J --> K[Export answered document]
+    J --> L[Run-scoped follow-up chat]
+    L --> M[Grounded chat answer + citations]
+```
 
-Core capabilities:
-- User authentication (`Sign up`, `Login`, `Logout`)
-- Signup safety check with `confirm password` validation
-- Persistent data storage with SQLAlchemy (`SQLite` local, `PostgreSQL` compatible via `DATABASE_URL`)
-- Questionnaire upload and parsing (CSV, XLSX, PDF, TXT)
-- Reference document upload and ingestion (TXT, MD, PDF, DOCX, CSV, XLSX)
-- AI-assisted answer generation using retrieval over reference chunks
-- Citation attachment for every supported answer
-- `"Not found in references."` fallback for unsupported questions
-- Reviewer edit workflow before export
-- Document export preserving original questionnaire order/structure
-- Same-format export support for CSV/XLSX/PDF questionnaire inputs
-- Grounded assistant chat (GPT-style) over uploaded references with persistent chat history
-- Run-scoped follow-up chat in review page (defaults to run references, optional checkbox to include full library)
+## What It Does
+- Authentication: signup, login, logout (`Flask-Login`)
+- Signup safety: confirm-password validation
+- Persistent data: SQLAlchemy models (SQLite local, external Postgres in deployment)
+- Questionnaire parsing: CSV, XLSX, PDF, TXT
+- Reference ingestion: TXT, MD, PDF, DOCX, CSV, XLSX
+- Grounded answer generation with citations
+- Strict unsupported fallback: `Not found in references.`
+- Review/edit step before export
+- Run-scoped follow-up chat (default to run references; optional full-library toggle)
+- Export:
+  - CSV/XLSX input -> answered CSV/XLSX with added answer columns
+  - PDF input -> answered PDF output
 
-## Why I Built It This Way
-- I intentionally used TF-IDF retrieval + extractive answering instead of calling an external LLM for every request.
-- Reason: this keeps output deterministic, cheap to run, and easier to audit during review.
-- I kept the architecture simple (Flask + SQLAlchemy + service modules) so the core upload -> generate -> review -> export flow stays reliable.
-
-## 2. Industry & Fictional Company (Required Context)
-- Industry: B2B SaaS for supply chain and procurement operations
+## Domain Setup Used
+- Industry: B2B SaaS for supply chain/procurement operations
 - Fictional company: **CrestPilot Logistics Cloud**
 
-CrestPilot Logistics Cloud helps manufacturers and distributors manage vendor onboarding, shipment orchestration, and supplier analytics.  
-It serves mid-market and enterprise customers in North America, and frequently responds to customer security/compliance questionnaires.
+CrestPilot helps manufacturers and distributors manage vendor onboarding, shipment operations, and procurement workflows.
+It regularly receives vendor security and compliance questionnaires from enterprise customers.
 
-Files:
+Included sample data:
 - Company profile: `sample_data/company_profile.md`
 - Questionnaire (12 questions): `sample_data/questionnaire.csv`
 - References (6 docs): `sample_data/references/*`
 
-## 3. Assignment Requirement Mapping
-### Must-have requirements
-1. User authentication: implemented via `Flask-Login` and hashed passwords.
-2. Persistent DB: implemented via SQLAlchemy models with local SQLite and production-ready external PostgreSQL support.
-3. Upload -> generate -> review -> export flow: fully implemented.
-4. AI meaningful work: retrieval + extractive answer composition over chunked reference corpus.
-5. Grounded outputs with citations: each supported answer includes citations + evidence snippets.
-6. Unsupported answers: strict fallback to `"Not found in references."`.
-7. Output document with same questionnaire structure/order: export preserves original order and adds answer columns for spreadsheet inputs.
-   PDF inputs are exported as answered PDFs with questions unchanged and answers/citations inserted below each question.
+## Capability Coverage
+| Capability | Status | Notes |
+|---|---|---|
+| User authentication | Done | Session auth with hashed passwords |
+| Persistent database storage | Done | SQLAlchemy models; external Postgres via `DATABASE_URL` |
+| Upload -> generate -> export workflow | Done | End-to-end in dashboard/review |
+| AI meaningful work | Done | Retrieval + extractive grounded answering |
+| Citation-backed outputs | Done | Citations + evidence snippets |
+| Unsupported answer handling | Done | Returns exact fallback text |
+| Review/edit before export | Done | Reviewer can edit answers/citations |
+| Structure-preserving export | Done | Preserves question order and appends answers |
 
-### Nice-to-have implemented
-1. Confidence score per answer.
-2. Evidence snippets shown in review UI.
-3. Coverage summary (total, cited, not found).
-4. Version history through run tracking (`GenerationRun` entries).
-5. Persistent grounded chat sessions (`ChatSession` + `ChatMessage`).
+Nice-to-have features implemented:
+- Confidence score
+- Evidence snippets
+- Coverage summary
+- Version history (runs)
 
-## 4. System Architecture
-```
+## Architecture
+```text
 run.py / wsgi.py
 app/
-  __init__.py            # app factory, extension setup, blueprints, error handlers
+  __init__.py            # app factory and registrations
   config.py              # env-driven configuration
   extensions.py          # db + login manager
-  models.py              # domain models
+  models.py              # users, questionnaires, runs, answers, chat
   routes/
-    auth.py              # signup/login/logout
-    workflow.py          # dashboard, upload, generate, review, export, assistant chat
+    auth.py              # auth endpoints
+    workflow.py          # upload/generate/review/export/chat
   services/
-    parser_service.py    # file parsing for questionnaire + references
-    retrieval_service.py # chunking, tf-idf retrieval, grounded answer creation
-    export_service.py    # export to csv/xlsx/txt preserving structure/order
+    parser_service.py    # questionnaire/reference parsing
+    retrieval_service.py # chunking + tf-idf retrieval + answer synthesis
+    export_service.py    # csv/xlsx/pdf export builders
   templates/
   static/css/
 tests/
 sample_data/
 ```
 
-## 5. AI Answering Approach
-For each generation run:
+## Retrieval/Answering Design
+For each run:
 1. Parse questionnaire into ordered questions.
-2. Parse references into plain text.
-3. Chunk reference text into bounded sections.
-4. Build TF-IDF vector index over chunks.
-5. Retrieve top-k relevant chunks per question by cosine similarity.
-6. Generate extractive answer from highest relevance sentences.
-7. Attach citations and evidence snippets.
-8. If relevance threshold is not met: return `"Not found in references."`.
+2. Parse and chunk reference documents.
+3. Build TF-IDF index over chunks.
+4. Retrieve top relevant chunks per question.
+5. Compose extractive answer from supported sentences.
+6. Attach citations and evidence snippets.
+7. If support is weak/absent, return `Not found in references.`
 
-This keeps outputs grounded and auditable without hallucinating unsupported claims.
+## Assumptions
+- Uploaded questionnaires are reasonably structured and contain detectable question rows.
+- For spreadsheets, preserving row order and appending answer columns is acceptable.
+- In weak-support situations, deterministic not-found is safer than speculative completion.
 
-## 6. Local Setup
-### Prerequisites
-- Python 3.10+ (3.11 recommended)
+## Trade-offs
+- Chose TF-IDF retrieval over external LLM calls for deterministic behavior, lower cost, and easier auditability.
+- Used straightforward Flask + SQLAlchemy architecture to keep core flow reliable and maintainable.
+- Used `db.create_all()` for simplicity in this scope; migrations would be preferred for a larger production setup.
 
-### Create and activate virtual environment
+## If I Had Two More Days
+1. Improve answer quality controls (question-type logic + stronger citation validation gates).
+2. Improve PDF fidelity for closer template-level layout parity.
+3. Add audit trail for reviewer edits at field level.
+4. Add async/background jobs for larger uploads.
+
+## Local Setup
+Prerequisites: Python 3.10+ (3.11 recommended)
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-```
-
-### Install dependencies
-```powershell
 pip install -r requirements.txt
-```
-
-### Run app
-```powershell
 python run.py
 ```
 
 App URL: `http://127.0.0.1:5000`
 
-## 7. How to Demo Quickly
-1. Sign up a user account.
+## Quick Demo
+1. Sign up or log in.
 2. Upload `sample_data/questionnaire.csv`.
-3. Upload all files from `sample_data/references/`.
-4. Click `Generate Answers Now` (smooth run flow).
-5. Review, edit if needed, and export.
+3. Upload files from `sample_data/references/`.
+4. Click `Generate Answers Now`.
+5. Review/edit answers and citations.
+6. Export answered document.
 
-## 8. Testing
-Run unit tests:
+## Testing
 ```powershell
 pytest
 ```
 
-Current test scope:
+Current test coverage includes:
 - Questionnaire parsing behavior
-- Retrieval grounding / not-found fallback behavior
+- Retrieval not-found grounding behavior
 - Spreadsheet export integrity
 
-## 9. Assumptions
-- Questionnaire files are mostly structured and contain identifiable question rows.
-- Spreadsheet export preserving row order + adding answer columns is acceptable structure preservation.
-- For unsupported/weakly supported questions, strict not-found behavior is preferred over speculative answers.
-
-## 10. Trade-offs
-- Uses TF-IDF retrieval for deterministic local execution and no external LLM dependency.
-- SQLite is used for portability; production would typically use PostgreSQL.
-- DB schema is created with `db.create_all()` for simplicity; production should use migrations.
-- Authentication is session-based with local user store; enterprise SSO is not included.
-
-## 11. If I Had Two More Days
-1. Add stronger answer quality controls: question-type prompts + stricter citation checks before returning an answer.
-2. Improve PDF export fidelity to better mirror original questionnaire layout.
-3. Add per-field edit history so reviewer changes are fully auditable.
-4. Add async/background processing for larger uploads to keep UI responsive.
-
-## 12. Deployment Notes
+## Deployment
 Included:
 - `Dockerfile`
 - `Procfile`
-- `wsgi.py` (Gunicorn entrypoint)
+- `wsgi.py`
 
-Suggested hosts:
-- Render
-- Railway
-- Fly.io
-
-Set env vars in deployment:
+Required environment variables:
 - `SECRET_KEY`
 - `DATABASE_URL`
 
-Recommended for durable persistence:
-- Use managed Postgres (Neon/Supabase/Render Postgres) and set `DATABASE_URL` to that value.
-- App accepts `postgres://...` and `postgresql://...` URLs and normalizes them automatically.
-- Avoid relying on container-local SQLite in free serverless/container environments for long-term persistence.
-- Current deployment is configured to use external Postgres via `DATABASE_URL` (Neon).
+Persistence note:
+- Use managed Postgres (Neon/Supabase/etc.) for durable storage.
+- App normalizes `postgres://...` and `postgresql://...` URLs automatically.
 
-## 13. Best No-Card Deployment
-If you need deployment without a credit card, use Hugging Face Spaces (Docker):
-- See: `DEPLOY_HF_SPACES.md`
-
-## 14. Final Submission Checklist
-- [x] User authentication
-- [x] Persistent database-backed models
-- [x] Upload questionnaire + references
-- [x] Parse questions from uploaded file
-- [x] Retrieve evidence from references
-- [x] Generate grounded answers with citations
-- [x] Return `"Not found in references."` when unsupported
-- [x] Structured review UI with question/answer/citations
-- [x] Reviewer edits before export
-- [x] Export preserves question order and adds answers/citations
-- [x] Nice-to-have: confidence score
-- [x] Nice-to-have: evidence snippets
-- [x] Nice-to-have: coverage summary
-- [x] Nice-to-have: run history
+Hugging Face deployment guide:
+- See `DEPLOY_HF_SPACES.md`
