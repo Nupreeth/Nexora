@@ -11,11 +11,16 @@ pinned: false
 
 Production-style structured questionnaire answering platform for B2B SaaS security/compliance workflows.
 
+## Quick Links
+- Live App: https://nupreeth-nexora.hf.space
+- GitHub Repository: https://github.com/Nupreeth/Nexora
+
 ## 1. What Was Built
 Nexora is a full-stack web application that automates structured questionnaire completion using uploaded reference documents as the source of truth.
 
 Core capabilities:
 - User authentication (`Sign up`, `Login`, `Logout`)
+- Signup safety check with `confirm password` validation
 - Persistent data storage with SQLAlchemy (`SQLite` local, `PostgreSQL` compatible via `DATABASE_URL`)
 - Questionnaire upload and parsing (CSV, XLSX, PDF, TXT)
 - Reference document upload and ingestion (TXT, MD, PDF, DOCX, CSV, XLSX)
@@ -118,7 +123,7 @@ App URL: `http://127.0.0.1:5000`
 1. Sign up a user account.
 2. Upload `sample_data/questionnaire.csv`.
 3. Upload all files from `sample_data/references/`.
-4. Open questionnaire details and click `Generate Answers`.
+4. Click `Generate Answers Now` (smooth run flow).
 5. Review, edit if needed, and export.
 
 ## 8. Testing
@@ -145,7 +150,7 @@ Current test scope:
 
 ## 11. Improvements With More Time
 1. LLM augmentation (optional) with citation-grounded generation guardrails.
-2. Full PDF structural export parity.
+2. Pixel-perfect PDF layout parity with original questionnaire templates.
 3. Role-based access control and organization-level workspaces.
 4. Background job queue for large document processing.
 5. Audit trail with per-field edit history.
@@ -170,6 +175,7 @@ Recommended for durable persistence:
 - Use managed Postgres (Neon/Supabase/Render Postgres) and set `DATABASE_URL` to that value.
 - App accepts `postgres://...` and `postgresql://...` URLs and normalizes them automatically.
 - Avoid relying on container-local SQLite in free serverless/container environments for long-term persistence.
+- Current deployment is configured to use external Postgres via `DATABASE_URL` (Neon).
 
 ## 13. Best No-Card Deployment
 If you need deployment without a credit card, use Hugging Face Spaces (Docker):
