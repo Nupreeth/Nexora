@@ -28,6 +28,15 @@
             <a class="primary-link" href="{{ url_for('workflow.export_run', questionnaire_id=questionnaire.id, run_id=run.id) }}">Export Document</a>
             <p class="subtle">Save edits before exporting if you changed any answers.</p>
         </div>
+        <div class="navigator-block">
+            <h3>Question Navigator</h3>
+            <input type="text" id="questionFilter" placeholder="Filter questions...">
+            <div class="navigator-list" id="questionNavList">
+                {% for row in rows %}
+                    <a href="#q-{{ loop.index }}" data-q-index="{{ loop.index }}" data-q-text="{{ row.question|lower }}">Q{{ loop.index }}</a>
+                {% endfor %}
+            </div>
+        </div>
     </aside>
 
     <section class="panel chat-thread">
@@ -38,7 +47,7 @@
 
         <form method="post" class="chat-form">
             {% for row in rows %}
-                <article class="chat-turn">
+                <article class="chat-turn" id="q-{{ loop.index }}">
                     <div class="bubble bubble-user">
                         <span class="role-tag">Question</span>
                         <p>{{ row.question }}</p>
@@ -84,4 +93,19 @@
         </form>
     </section>
 </section>
+<script>
+(() => {
+    const filterInput = document.getElementById("questionFilter");
+    const navList = document.getElementById("questionNavList");
+    if (!filterInput || !navList) return;
+    const links = Array.from(navList.querySelectorAll("a"));
+    filterInput.addEventListener("input", () => {
+        const query = filterInput.value.trim().toLowerCase();
+        links.forEach((link) => {
+            const qText = link.getAttribute("data-q-text") || "";
+            link.style.display = qText.includes(query) ? "inline-flex" : "none";
+        });
+    });
+})();
+</script>
 {% endblock %}
