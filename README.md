@@ -24,6 +24,7 @@ Core capabilities:
 - `"Not found in references."` fallback for unsupported questions
 - Reviewer edit workflow before export
 - Document export preserving original questionnaire order/structure
+- Same-format export support for CSV/XLSX/PDF questionnaire inputs
 - Grounded assistant chat (GPT-style) over uploaded references with persistent chat history
 - Run-scoped follow-up chat in review page (defaults to run references, optional checkbox to include full library)
 
@@ -48,6 +49,7 @@ Files:
 5. Grounded outputs with citations: each supported answer includes citations + evidence snippets.
 6. Unsupported answers: strict fallback to `"Not found in references."`.
 7. Output document with same questionnaire structure/order: export preserves original order and adds answer columns for spreadsheet inputs.
+   PDF inputs are exported as answered PDFs with questions unchanged and answers/citations inserted below each question.
 
 ### Nice-to-have implemented
 1. Confidence score per answer.

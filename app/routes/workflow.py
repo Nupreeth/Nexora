@@ -1,6 +1,7 @@
 import io
 import json
 import re
+import base64
 from pathlib import Path
 from uuid import uuid4
 
@@ -476,9 +477,14 @@ def _store_questionnaire(uploaded_file) -> tuple[Questionnaire | None, int]:
         flash("Unsupported questionnaire format.", "error")
         return None, 0
 
+    raw_content = uploaded_file.read()
+    if not raw_content:
+        flash("Uploaded questionnaire file is empty.", "error")
+        return None, 0
+
     stored_name = f"{uuid4().hex}{extension}"
     stored_path = current_app.config["QUESTIONNAIRE_DIR"] / stored_name
-    uploaded_file.save(stored_path)
+    stored_path.write_bytes(raw_content)
 
     try:
         question_texts, parse_meta = parse_questionnaire(stored_path, extension)
@@ -486,6 +492,9 @@ def _store_questionnaire(uploaded_file) -> tuple[Questionnaire | None, int]:
         stored_path.unlink(missing_ok=True)
         flash("Failed to parse questionnaire file.", "error")
         return None, 0
+
+    # Keep a copy of original bytes in metadata so export still works if ephemeral file storage is reset.
+    parse_meta["source_b64"] = base64.b64encode(raw_content).decode("ascii")
 
     question_texts = [text.strip() for text in question_texts if text and text.strip()]
     if not question_texts:
